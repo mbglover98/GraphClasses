@@ -6,26 +6,25 @@
 #include <map>
 #include <list>
 #include <algorithm>
+#include <chrono>
 
 template <class T>
 class graph{
 
 public:
-    virtual bool adjacent(T x, T y) { return 0; }
+    virtual bool adjacent(T x, T y) = 0;
 
-    virtual std::vector<T> neighbors(T x) { 
-        std::vector<T> help;
-        return help; }
+    virtual std::vector<T> neighbors(T x) = 0; 
 
-    virtual void addEdge(T x, T y){}
-    
-    virtual void deleteEdge(T x, T y){}
+    virtual void addEdge(T x, T y) = 0;
 
-    virtual void deleteNode(T x){}
+        virtual void deleteEdge(T x, T y) = 0;
 
-    virtual void dfs(T &startNode){}
+        virtual void deleteNode(T x) = 0;
 
-    virtual void bfs(T& startNode) {}
+        virtual void dfs(T& startNode,void (*visit)(T)) = 0;
+
+        virtual void bfs(T& startNode, void (*visit)(T)) = 0;
 
 };
 
@@ -77,7 +76,6 @@ public:
     void deleteNode(T x) {
         
         for (auto itr = connections.begin(); itr != connections.end();++itr) {
-            std::cout << itr->second.size();
             auto loc = std::find(itr->second.begin(), itr->second.end(), x);
             if(loc != itr->second.end())
                 itr->second.erase(loc);
@@ -88,8 +86,9 @@ public:
 
     void deleteEdge(T x, T y) {
         auto xNode = connections.find(x);
-
-        xNode->second.erase(std::find(xNode->second.begin(), xNode->second.end(),y));
+        auto erasureLoc = std::find(xNode->second.begin(), xNode->second.end(), y);
+        if(erasureLoc != xNode->second.end())
+            xNode->second.erase(std::find(xNode->second.begin(), xNode->second.end(),y));
     }
 
     std::vector<T> getNodes() {
@@ -208,6 +207,7 @@ public:
             connections[i].erase(connections[i].begin() + index);
         }
         connections.erase(connections.begin() + index);
+        nodes.erase(std::find(nodes.begin(), nodes.end(), x));
     }
 
 
@@ -259,7 +259,9 @@ public:
         }
         newLine.push_back(0);
         connections.push_back(newLine);
+        
         nodes.push_back(x);
+        connections[nodes.size() - 1][nodes.size() - 1] = 1;
     }
 
     std::vector<T> getNodes() {
@@ -272,50 +274,229 @@ public:
 };
 
 template <class T>
-void printWEndl(T in) {
-    std::cout << in << std::endl;
+void printWComma(T in) {
+    std::cout << in << ", ";
 }
+
+template<class T>
+adjList<T> generateAdjListGraph(int numberOfNodes, double edgeProbability) {
+    adjList<T> out;
+    for (int i = 0; i < numberOfNodes; ++i) {
+        out.addNode(i);
+    }
+
+    for (int i = 0; i < numberOfNodes; ++i) {
+        for (int j = 0; j < numberOfNodes; ++j) {
+            if ((double) rand()/RAND_MAX > edgeProbability &&i!=j) {
+                out.addEdge(i, j);
+            }
+        }
+    }
+    return out;
+}
+
+template <class T>
+adjMatrix<T> generateAdjMatrixGraph(int numberOfNodes, double edgeProbability) {
+    adjMatrix<T> out;
+    for (int i = 0; i < numberOfNodes; ++i) {
+        out.addNode(i);
+    }
+
+    for (int i = 0; i < numberOfNodes; ++i) {
+        for (int j = 0; j < numberOfNodes; ++j) {
+            if ((double) rand()/RAND_MAX > edgeProbability && i != j) {
+                out.addEdge(i, j);
+            }
+        }
+    }
+    return out;
+}
+
+void timer() {
+    int sizes[5] = { 2,8,64,256,1024 };
+    std::cout << "Timing the Matrix Builds" << std::endl;
+    for (int i = 0; i < 5; ++i) {
+        auto start = std::chrono::high_resolution_clock::now();
+        generateAdjMatrixGraph<int>(sizes[i], .5);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << sizes[i] << " took " << duration.count() << " microseconds to complete\n";
+    }
+}
+
 int main()
 {
-    adjList<int> t;
-    t.addNode(1);
-    t.addNode(2);
-    t.addNode(4);
-    t.addNode(3);
-    t.addNode(5);
-    t.addNode(6);
-    t.addNode(7);
-    t.addEdge(1, 3);
-    t.addEdge(1, 4);
-    t.addEdge(1, 5);
-    t.addEdge(3, 6);
-    t.addEdge(3, 7);
-    t.addEdge(4, 2);
-    t.addEdge(4, 7);
-    t.addEdge(5, 4);
-    t.addEdge(5, 3);
-    t.addEdge(2, 1);
-    t.deleteNode(1);
-   // std::cout << t.adjacent(1,7);
-    std::map<int,std::vector<int>> test = t.getConnections();
-    std::vector<int> test2 = t.getNodes();
-    //for (auto itr : test2) {
-     //   std::cout << itr << std::endl;
-    //}
-    /*for (int i = 0; i < test2.size(); ++i) {
+    adjMatrix<int> matrixTest = generateAdjMatrixGraph<int>(10, .6);
+    adjList<int> listTest = generateAdjListGraph<int>(10, .6);
+    timer();
+
+
+    std::cout << "\nMatrix Tests\n";
+    std::vector<std::vector<int>> test = matrixTest.getConnections();
+    std::vector<int> test2 = matrixTest.getNodes(); 
+
+    std::cout << "    ";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << " ";
+    }
+    std::cout << "\n\n";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << "   ";
         for (int j = 0; j < test2.size(); ++j) {
             std::cout << test[i][j] << " ";
         }
         std::cout << std::endl;
-    }*/
-    //t.bfs(test2[0],&printWEndl<int>);
-    for (auto itr = test.begin(); itr != test.end(); itr++) {
-        std::cout << itr->first;
-        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
-            std::cout << *i;
+    }
+    std::cout << "\ncheck for path between 1 and 3: " << matrixTest.adjacent(1, 3);
+    std::cout << "\n\ndelete connection between 1 and 2\n";
+    matrixTest.deleteEdge(1, 2);
+    test = matrixTest.getConnections();
+
+    std::cout << "    ";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << " ";
+    }
+    std::cout << "\n\n";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << "   ";
+        for (int j = 0; j < test2.size(); ++j) {
+            std::cout << test[i][j] << " ";
         }
         std::cout << std::endl;
     }
-    std::cout << "Hello World!\n";
-}
 
+    std::cout << "\nadd connection between 1 and 7\n";
+    matrixTest.addEdge(1, 7);
+    test = matrixTest.getConnections();
+
+    std::cout << "    ";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << " ";
+    }
+    std::cout << "\n\n";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << "   ";
+        for (int j = 0; j < test2.size(); ++j) {
+            std::cout << test[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "\ndelete node 1\n";
+    matrixTest.deleteNode(1);
+    test = matrixTest.getConnections();
+    test2 = matrixTest.getNodes();
+    std::cout << "    ";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << " ";
+    }
+    std::cout << "\n\n";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << "   ";
+        for (int j = 0; j < test2.size(); ++j) {
+            std::cout << test[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::vector<int> matrixNeighbors = matrixTest.neighbors(4);
+    std::cout << "\nNeighbors of 4 = ";
+    for (int i = 0; i < matrixNeighbors.size(); ++i) {
+        std::cout << matrixNeighbors[i] << ",";
+    }
+
+    std::cout << std::endl << "\nAdding node 11\n";
+
+    matrixTest.addNode(11);
+    test = matrixTest.getConnections();
+    test2 = matrixTest.getNodes();
+    std::cout << "    ";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << " ";
+    }
+    std::cout << "\n\n";
+    for (int i = 0; i < test2.size(); ++i) {
+        std::cout << test2[i] << "   ";
+        for (int j = 0; j < test2.size(); ++j) {
+            std::cout << test[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "\nBreadth First Search passed print with Comma\n";
+    matrixTest.bfs(test2[0],&printWComma<int>);
+    std::cout << "\n\nDepth First Search passed print with Comma\n";
+    matrixTest.dfs(test2[0], &printWComma<int>);
+
+    ///////////////////////////////////////////////////////////////
+    std::cout << "\n\nList tests\n\n";
+    std::map<int, std::vector<int>> test3 = listTest.getConnections();
+    std::vector<int> test4 = listTest.getNodes();
+
+    for (auto itr = test3.begin(); itr != test3.end(); itr++) {
+        std::cout << itr->first << " - ";
+        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
+            std::cout << *i << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "\ncheck for path between 0 and 2: " << listTest.adjacent(0, 2);
+    std::cout << "\n\ndelete connection between 1 and 2\n";
+    listTest.deleteEdge(1, 2);
+    test3 = listTest.getConnections();
+
+    for (auto itr = test3.begin(); itr != test3.end(); itr++) {
+        std::cout << itr->first << " - ";
+        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
+            std::cout << *i << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "\nadd connection between 1 and 7\n";
+    listTest.addEdge(1, 7);
+    test3 = listTest.getConnections();
+
+    for (auto itr = test3.begin(); itr != test3.end(); itr++) {
+        std::cout << itr->first << " - ";
+        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
+            std::cout << *i << ", ";
+        }
+        std::cout << std::endl;
+    }std::cout << std::endl;
+    
+
+    std::cout << "\ndelete node 1\n";
+    listTest.deleteNode(1);
+    test3 = listTest.getConnections();
+    test4 = listTest.getNodes();
+    for (auto itr = test3.begin(); itr != test3.end(); itr++) {
+        std::cout << itr->first << " - ";
+        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
+            std::cout << *i << ", ";
+        }
+        std::cout << std::endl;
+    }
+
+    std::vector<int> listNeighbors = listTest.neighbors(4);
+    std::cout << "Neighbors of 4 = ";
+    for (int i = 0; i < listNeighbors.size(); ++i) {
+        std::cout << listNeighbors[i] << ",";
+    }
+
+    std::cout << std::endl << "\nAdding node 11\n\n";
+
+    listTest.addNode(11);
+    test3 = listTest.getConnections();
+    test4 = listTest.getNodes();
+
+    for (auto itr = test3.begin(); itr != test3.end(); itr++) {
+        std::cout << itr->first << " - ";
+        for (auto i = itr->second.begin(); i != itr->second.end(); ++i) {
+            std::cout << *i << ", ";
+        }
+        std::cout << std::endl;
+    }
+    std::cout << "\nBreadth First Search passed print with Comma\n";
+    listTest.bfs(test2[0], &printWComma<int>);
+    std::cout << "\n\nDepth First Search passed print with Comma\n";
+    listTest.dfs(test2[0], &printWComma<int>);
+}
